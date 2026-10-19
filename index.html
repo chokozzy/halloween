@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halloween en el fraccionamiento</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎃</text></svg>">
+<style>
+  :root{--bg:#fff8ef;--fg:#1b1b1b;--nar:#d95f0e;--ok:#1f7a3a;--borde:#d9c7b0;--suave:#6b5a48}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:22px;line-height:1.4}
+  main{max-width:560px;margin:0 auto;padding:16px 16px 48px}
+  h1{font-size:34px;margin:12px 0}
+  h2{font-size:30px;margin:4px 0 22px;line-height:1.25}
+  p{margin:0 0 18px}
+  .btn{display:block;width:100%;min-height:76px;margin:0 0 16px;padding:14px 18px;border:3px solid transparent;border-radius:18px;font-size:27px;font-weight:700;cursor:pointer;background:var(--nar);color:#fff;font-family:inherit}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.6}
+  .btn.si{background:var(--ok)}
+  .btn.sec{background:#fff;color:var(--fg);border-color:#8a7a68}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+  .grid.mz{grid-template-columns:repeat(2,1fr);gap:14px}
+  .mzbtn{min-height:110px;border-radius:18px;border:3px solid #8a7a68;background:#fff;color:var(--fg);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .mzbtn small{font-size:18px;color:var(--suave);font-weight:600}
+  .mzbtn span{font-size:48px;font-weight:800;line-height:1.1}
+  .num{min-height:76px;border-radius:16px;border:3px solid var(--borde);background:#fff;font-size:28px;font-weight:700;cursor:pointer;position:relative;color:var(--fg);font-family:inherit}
+  .num.ya{border-color:var(--ok)}
+  .num.ya::after{content:"✓";position:absolute;top:2px;right:8px;font-size:20px;color:var(--ok)}
+  .contador{display:flex;align-items:center;justify-content:center;gap:26px;margin:28px 0 36px}
+  .contador button{width:88px;height:88px;border-radius:50%;border:none;background:var(--nar);color:#fff;font-size:48px;font-weight:700;cursor:pointer;line-height:1}
+  .contador button:disabled{background:#c9c0b6}
+  .contador output{font-size:68px;font-weight:800;min-width:96px;text-align:center}
+  .resumen{background:#fff;border:3px solid var(--borde);border-radius:18px;padding:8px 18px;margin-bottom:22px}
+  .resumen div{padding:12px 0;border-bottom:1px solid #eee}
+  .resumen div:last-child{border:none}
+  .resumen b{display:block;font-size:18px;color:var(--suave);font-weight:600}
+  .aviso{background:#fff3cd;border:2px solid #d4a800;border-radius:14px;padding:12px 14px;font-size:20px;margin-bottom:18px}
+  .error{background:#fde2e1;border-color:#c0392b}
+  .detalle{font-size:15px;color:var(--suave);word-break:break-word;margin-top:8px}
+  .atras{background:none;border:none;color:var(--suave);font-size:21px;text-decoration:underline;padding:10px 0;margin-bottom:6px;cursor:pointer;font-family:inherit}
+  .nota{font-size:18px;color:var(--suave)}
+  .centro{text-align:center}
+  .emoji{font-size:80px;line-height:1;margin:12px 0}
+  .eventos{background:#fff;border:3px solid var(--borde);border-radius:18px;padding:6px 18px;margin-bottom:24px}
+  .eventos div{padding:12px 0;border-bottom:1px solid #eee;font-size:21px}
+  .eventos div:last-child{border:none}
+</style>
+</head>
+<body>
+<main id="app"><p class="centro" style="margin-top:40px">Cargando…</p></main>
+
+<script src="config.js"></script>
+<script>
+  var casas = [];
+  var st = {};
+  var hist = [];
+  var cont = null;   // configuración del contador visible
+
+  function pintar(html){ document.getElementById('app').innerHTML = html; window.scrollTo(0,0); }
+  function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function ir(fn){ hist.push(fn); fn(); }
+  function atras(){ hist.pop(); var f = hist[hist.length-1]; if (f) f(); }
+  function btnAtras(){ return hist.length > 1 ? '<button class="atras" onclick="atras()">← Regresar</button>' : ''; }
+  function casaSel(){ return casas[st.c].numeros[st.n]; }
+  function nombreCasa(){ return esc(casaSel().n) + esc(casas[st.c].calle); }
+  function plural(n, uno, varios){ return n + ' ' + (n === 1 ? uno : varios); }
+  function textoError(e){ return esc((e && e.message) ? e.message : String(e || 'Error desconocido')); }
+
+  function cargar(){
+    pintar('<p class="centro" style="margin-top:40px">Cargando…</p>');
+    apiGet('casas')
+      .then(function(d){
+        casas = d || [];
+        if (!casas.length){
+          pintar('<div class="aviso error">La encuesta todavía no tiene casas registradas.' +
+                 '<div class="detalle">Llena la hoja "Casas" con manzana y número.</div></div>');
+          return;
+        }
+        hist = []; ir(inicio);
+      })
+      .catch(function(e){
+        pintar('<div class="aviso error">No se pudo cargar la encuesta.' +
+               '<div class="detalle">' + textoError(e) + '</div></div>' +
+               '<button class="btn" onclick="cargar()">Intentar de nuevo</button>');
+      });
+  }
+
+  function inicio(){
+    pintar(
+      '<div class="centro emoji">🎃</div>' +
+      '<h1 class="centro">Halloween en el fraccionamiento</h1>' +
+      '<div class="eventos">' +
+        '<div>🎬 <b>Viernes 30</b> · Película al aire libre</div>' +
+        '<div>👻 <b>Sábado 31</b> · Concurso de disfraces y pedida de dulces</div>' +
+      '</div>' +
+      '<p class="centro">Unas preguntas rápidas.<br>Toma un minuto.</p>' +
+      '<button class="btn" onclick="empezar()">Empezar</button>'
+    );
+  }
+
+  function empezar(){
+    st = {};
+    if (casas.length === 1){ st.c = 0; ir(pasoNumero); }
+    else ir(pasoCalle);
+  }
+
+  function pasoCalle(){
+    var h = btnAtras() + '<h2>¿En qué manzana vives?</h2>' +
+            '<p class="nota">Es la letra de tu casa. Ejemplo: en la 21<b>C</b>, la manzana es C.</p><div class="grid mz">';
+    casas.forEach(function(x, i){
+      h += '<button class="mzbtn" onclick="st.c=' + i + ';ir(pasoNumero)"><small>Manzana</small><span>' + esc(x.calle) + '</span></button>';
+    });
+    pintar(h + '</div>');
+  }
+
+  function pasoNumero(){
+    var calle = casas[st.c];
+    var h = btnAtras() + '<h2>¿Cuál es tu número de casa?</h2>' +
+            '<p class="nota">Manzana ' + esc(calle.calle) + '</p><div class="grid">';
+    calle.numeros.forEach(function(x, j){
+      h += '<button class="num' + (x.ya ? ' ya' : '') + '" onclick="st.n=' + j + ';ir(pasoDulces)">' + esc(x.n) + '</button>';
+    });
+    h += '</div><p class="nota">✓ = esta casa ya contestó</p>';
+    pintar(h);
+  }
+
+  function pasoDulces(){
+    var h = btnAtras();
+    if (casaSel().ya) h += '<div class="aviso">La casa <b>' + nombreCasa() + '</b> ya contestó. Si continúas, se actualiza su respuesta.</div>';
+    h += '<h2>¿Vas a entregar dulces el sábado 31?</h2>' +
+         '<button class="btn si" onclick="st.d=true;ir(pasoNinos)">Sí, voy a dar dulces 🍬</button>' +
+         '<button class="btn sec" onclick="st.d=false;ir(pasoNinos)">No</button>';
+    pintar(h);
+  }
+
+  function pasoNinos(){
+    pintar(btnAtras() +
+      '<h2>¿Van a salir niños de tu casa a pedir dulces?</h2>' +
+      '<button class="btn si" onclick="st.k=st.k||1;ir(pasoCuantos)">Sí 👻</button>' +
+      '<button class="btn sec" onclick="st.k=0;st.cc=0;ir(pasoPelicula)">No</button>'
+    );
+  }
+
+  function pasoCuantos(){
+    contador({ titulo: '¿Cuántos niños?', campo: 'k', min: 1, max: 15, sig: pasoConcurso });
+  }
+
+  function pasoConcurso(){
+    st.cc = Math.min(st.cc || 0, st.k);
+    contador({ titulo: '¿Cuántos de ellos entran al concurso de disfraces?',
+               nota: 'Sábado 31, antes de la pedida de dulces. Si ninguno, deja 0.',
+               campo: 'cc', min: 0, max: st.k, sig: pasoPelicula });
+  }
+
+  function pasoPelicula(){
+    pintar(btnAtras() +
+      '<h2>¿Vienen a la película al aire libre el viernes 30?</h2>' +
+      '<button class="btn si" onclick="st.pp=st.pp||2;ir(pasoPersonas)">Sí, vamos 🎬</button>' +
+      '<button class="btn sec" onclick="st.pp=0;ir(confirmar)">No</button>'
+    );
+  }
+
+  function pasoPersonas(){
+    contador({ titulo: '¿Cuántas personas vienen a la película?',
+               nota: 'Cuenta adultos y niños. Nos sirve para saber cuántas sillas poner.',
+               campo: 'pp', min: 1, max: 30, sig: confirmar });
+  }
+
+  // ---- contador reutilizable con botones − y + ----
+  function contador(cfg){
+    cont = cfg;
+    st[cfg.campo] = Math.max(cfg.min, Math.min(cfg.max, st[cfg.campo] || cfg.min));
+    pintar(btnAtras() +
+      '<h2>' + cfg.titulo + '</h2>' +
+      (cfg.nota ? '<p class="nota">' + cfg.nota + '</p>' : '') +
+      '<div class="contador">' +
+        '<button id="menos" aria-label="Uno menos" onclick="cambiar(-1)">−</button>' +
+        '<output id="cuenta"></output>' +
+        '<button id="mas" aria-label="Uno más" onclick="cambiar(1)">+</button>' +
+      '</div>' +
+      '<button class="btn" onclick="ir(cont.sig)">Continuar</button>'
+    );
+    actualizarContador();
+  }
+
+  function cambiar(d){
+    st[cont.campo] = Math.max(cont.min, Math.min(cont.max, st[cont.campo] + d));
+    actualizarContador();
+  }
+
+  function actualizarContador(){
+    var v = st[cont.campo];
+    document.getElementById('cuenta').textContent = v;
+    document.getElementById('menos').disabled = v <= cont.min;
+    document.getElementById('mas').disabled = v >= cont.max;
+  }
+
+  function confirmar(msgError){
+    var filas =
+      '<div><b>Casa</b>' + nombreCasa() + '</div>' +
+      '<div><b>¿Entrega dulces?</b>' + (st.d ? 'Sí ✅' : 'No') + '</div>' +
+      '<div><b>Niños que salen a pedir dulces</b>' + (st.k > 0 ? plural(st.k, 'niño', 'niños') : 'Ninguno') + '</div>';
+    if (st.k > 0) filas += '<div><b>Niños en el concurso de disfraces</b>' + (st.cc > 0 ? plural(st.cc, 'niño', 'niños') : 'Ninguno') + '</div>';
+    filas += '<div><b>Película del viernes</b>' + (st.pp > 0 ? 'Sí, ' + plural(st.pp, 'persona', 'personas') : 'No vienen') + '</div>';
+
+    pintar(btnAtras() +
+      (typeof msgError === 'string' ? '<div class="aviso error">' + msgError + '</div>' : '') +
+      '<h2>Revisa tu respuesta</h2>' +
+      '<div class="resumen">' + filas + '</div>' +
+      '<button class="btn si" id="enviar" onclick="enviar()">Enviar ✔</button>' +
+      '<button class="btn sec" onclick="hist=hist.slice(0,hist.indexOf(pasoDulces)+1);pasoDulces()">Corregir</button>'
+    );
+  }
+
+  function enviar(){
+    var b = document.getElementById('enviar');
+    b.disabled = true; b.textContent = 'Enviando…';
+    apiPost({ calle: casas[st.c].calle, numero: casaSel().n, dulces: st.d === true,
+              ninos: st.k || 0, concurso: st.cc || 0, personas: st.pp || 0 })
+      .then(function(){ casaSel().ya = true; gracias(); })
+      .catch(function(e){
+        confirmar('No se pudo enviar. Revisa tu internet y vuelve a tocar "Enviar".<div class="detalle">' + textoError(e) + '</div>');
+      });
+  }
+
+  function gracias(){
+    hist = [];
+    pintar(
+      '<div class="centro emoji">🎃</div>' +
+      '<h1 class="centro">¡Listo, gracias!</h1>' +
+      '<p class="centro">La respuesta de <b>' + nombreCasa() + '</b> quedó guardada.</p>' +
+      '<button class="btn sec" onclick="hist=[];ir(inicio)">Registrar otra casa</button>'
+    );
+  }
+
+  cargar();
+</script>
+</body>
+</html>
