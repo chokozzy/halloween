@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Casas con dulces</title>
+<title>Casas con dulces · Halloween Sotopark 2026</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎃</text></svg>">
 <style>
   :root{--bg:#1d1424;--fg:#fff6ea;--nar:#ff8a1f;--card:#2c2036}
@@ -38,7 +38,7 @@
 
   function pintar(d){
     var total = d.calles.reduce(function(a, c){ return a + c.numeros.length; }, 0);
-    var h = '<h1>🍬 Casas que dan dulces</h1><div class="total">' + total + (total === 1 ? ' casa' : ' casas') + '</div>';
+    var h = '<h1>🍬 Casas que dan dulces</h1><div style="opacity:.8;margin-bottom:6px">Halloween Sotopark 2026</div><div class="total">' + total + (total === 1 ? ' casa' : ' casas') + '</div>';
     if (!total) h += '<p>Todavía no hay casas registradas.</p>';
     d.calles.forEach(function(c){
       h += '<div class="calle"><h2>Manzana ' + esc(c.calle) + '</h2><div class="chips">';
