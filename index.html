@@ -138,7 +138,7 @@
     pintar(btnAtras() +
       '<h2>¿Van a salir niños de tu casa a pedir dulces?</h2>' +
       '<button class="btn si" onclick="st.k=st.k||1;ir(pasoCuantos)">Sí 👻</button>' +
-      '<button class="btn sec" onclick="st.k=0;st.cc=0;st.ed=[];ir(pasoPelicula)">No</button>'
+      '<button class="btn sec" onclick="st.k=0;st.cc=0;st.ed=[];ir(pasoAdultos)">No</button>'
     );
   }
 
@@ -156,10 +156,10 @@
   // Después del contador del concurso: pide la edad de cada concursante
   function trasConcurso(){
     st.ed = (st.ed || []).slice(0, st.cc);
-    if (st.cc > 0) ir(pasoEdad(0)); else ir(pasoPelicula);
+    if (st.cc > 0) ir(pasoEdad(0)); else ir(pasoAdultos);
   }
 
-  var GRUPOS = ['0 a 5 años', '6 a 12 años', '13 años o más'];
+  var GRUPOS = ['0 a 4 años', '5 a 9 años', '10 a 15 años', '16 años o más'];
 
   function pasoEdad(i){
     var f = function(){
@@ -177,15 +177,28 @@
 
   function elegirEdad(i, j){
     st.ed[i] = j;
-    if (i + 1 < st.cc) ir(pasoEdad(i + 1)); else ir(pasoPelicula);
+    if (i + 1 < st.cc) ir(pasoEdad(i + 1)); else ir(pasoAdultos);
   }
 
   function ordinal(i){ return ['primer','segundo','tercer','cuarto','quinto','sexto','séptimo','octavo','noveno','décimo'][i] || ((i + 1) + 'º'); }
 
   function conteoEdades(){
-    var c = [0, 0, 0];
-    (st.ed || []).slice(0, st.cc || 0).forEach(function(j){ if (j >= 0 && j <= 2) c[j]++; });
+    var c = [0, 0, 0, 0];
+    (st.ed || []).slice(0, st.cc || 0).forEach(function(j){ if (j >= 0 && j <= 3) c[j]++; });
     return c;
+  }
+
+  function pasoAdultos(){
+    pintar(btnAtras() +
+      '<h2>¿Algún adulto de tu casa se va a disfrazar para el concurso?</h2>' +
+      '<p class="nota">Categoría 16 años o más.</p>' +
+      '<button class="btn si" onclick="st.ad=st.ad||1;ir(pasoCuantosAdultos)">Sí 🧛</button>' +
+      '<button class="btn sec" onclick="st.ad=0;ir(pasoPelicula)">No</button>'
+    );
+  }
+
+  function pasoCuantosAdultos(){
+    contador({ titulo: '¿Cuántos adultos entran al concurso?', campo: 'ad', min: 1, max: 10, sig: pasoPelicula });
   }
 
   function pasoPelicula(){
@@ -242,6 +255,7 @@
       filas += '<div><b>Niños en el concurso de disfraces</b>' +
                (st.cc > 0 ? plural(st.cc, 'niño', 'niños') + '<br><span class="nota">' + det.join(' · ') + '</span>' : 'Ninguno') + '</div>';
     }
+    filas += '<div><b>Adultos en el concurso</b>' + (st.ad > 0 ? plural(st.ad, 'adulto', 'adultos') : 'Ninguno') + '</div>';
     filas += '<div><b>Película del viernes</b>' + (st.pp > 0 ? 'Sí, ' + plural(st.pp, 'persona', 'personas') : 'No vienen') + '</div>';
 
     pintar(btnAtras() +
@@ -257,7 +271,8 @@
     var b = document.getElementById('enviar');
     b.disabled = true; b.textContent = 'Enviando…';
     apiPost({ calle: casas[st.c].calle, numero: casaSel().n, dulces: st.d === true,
-              ninos: st.k || 0, edades: (function(c){ return { c0: c[0], c1: c[1], c2: c[2] }; })(conteoEdades()),
+              ninos: st.k || 0, edades: (function(c){ return { c0: c[0], c1: c[1], c2: c[2], c3: c[3] }; })(conteoEdades()),
+              adultos: st.ad || 0,
               personas: st.pp || 0 })
       .then(function(){ casaSel().ya = true; gracias(); })
       .catch(function(e){
