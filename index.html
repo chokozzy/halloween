@@ -18,6 +18,7 @@
   .btn:disabled{opacity:.6}
   .btn.si{background:var(--ok)}
   .btn.sec{background:#fff;color:var(--fg);border-color:#8a7a68}
+  .btn.sec.elegido{border-color:var(--ok);background:#eaf6ee}
   .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
   .grid.mz{grid-template-columns:repeat(2,1fr);gap:14px}
   .mzbtn{min-height:110px;border-radius:18px;border:3px solid #8a7a68;background:#fff;color:var(--fg);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center}
@@ -137,7 +138,7 @@
     pintar(btnAtras() +
       '<h2>¿Van a salir niños de tu casa a pedir dulces?</h2>' +
       '<button class="btn si" onclick="st.k=st.k||1;ir(pasoCuantos)">Sí 👻</button>' +
-      '<button class="btn sec" onclick="st.k=0;st.cc=0;ir(pasoPelicula)">No</button>'
+      '<button class="btn sec" onclick="st.k=0;st.cc=0;st.ed=[];ir(pasoPelicula)">No</button>'
     );
   }
 
@@ -149,7 +150,42 @@
     st.cc = Math.min(st.cc || 0, st.k);
     contador({ titulo: '¿Cuántos de ellos entran al concurso de disfraces?',
                nota: 'Sábado 31, antes de la pedida de dulces. Si ninguno, deja 0.',
-               campo: 'cc', min: 0, max: st.k, sig: pasoPelicula });
+               campo: 'cc', min: 0, max: st.k, sig: trasConcurso });
+  }
+
+  // Después del contador del concurso: pide la edad de cada concursante
+  function trasConcurso(){
+    st.ed = (st.ed || []).slice(0, st.cc);
+    if (st.cc > 0) ir(pasoEdad(0)); else ir(pasoPelicula);
+  }
+
+  var GRUPOS = ['0 a 5 años', '6 a 12 años', '13 años o más'];
+
+  function pasoEdad(i){
+    var f = function(){
+      var h = btnAtras() +
+        (st.cc > 1 ? '<p class="nota">Concursante ' + (i + 1) + ' de ' + st.cc + '</p>' : '') +
+        '<h2>' + (st.cc > 1 ? '¿Qué edad tiene el ' + ordinal(i) + ' niño del concurso?' : '¿Qué edad tiene el niño del concurso?') + '</h2>';
+      GRUPOS.forEach(function(g, j){
+        h += '<button class="btn sec' + (st.ed[i] === j ? ' elegido' : '') + '" onclick="elegirEdad(' + i + ',' + j + ')">' + g + '</button>';
+      });
+      pintar(h);
+    };
+    f.esEdad = true;
+    return f;
+  }
+
+  function elegirEdad(i, j){
+    st.ed[i] = j;
+    if (i + 1 < st.cc) ir(pasoEdad(i + 1)); else ir(pasoPelicula);
+  }
+
+  function ordinal(i){ return ['primer','segundo','tercer','cuarto','quinto','sexto','séptimo','octavo','noveno','décimo'][i] || ((i + 1) + 'º'); }
+
+  function conteoEdades(){
+    var c = [0, 0, 0];
+    (st.ed || []).slice(0, st.cc || 0).forEach(function(j){ if (j >= 0 && j <= 2) c[j]++; });
+    return c;
   }
 
   function pasoPelicula(){
@@ -178,7 +214,7 @@
         '<output id="cuenta"></output>' +
         '<button id="mas" aria-label="Uno más" onclick="cambiar(1)">+</button>' +
       '</div>' +
-      '<button class="btn" onclick="ir(cont.sig)">Continuar</button>'
+      '<button class="btn" onclick="cont.sig === trasConcurso ? trasConcurso() : ir(cont.sig)">Continuar</button>'
     );
     actualizarContador();
   }
@@ -200,7 +236,12 @@
       '<div><b>Casa</b>' + nombreCasa() + '</div>' +
       '<div><b>¿Entrega dulces?</b>' + (st.d ? 'Sí ✅' : 'No') + '</div>' +
       '<div><b>Niños que salen a pedir dulces</b>' + (st.k > 0 ? plural(st.k, 'niño', 'niños') : 'Ninguno') + '</div>';
-    if (st.k > 0) filas += '<div><b>Niños en el concurso de disfraces</b>' + (st.cc > 0 ? plural(st.cc, 'niño', 'niños') : 'Ninguno') + '</div>';
+    if (st.k > 0){
+      var ce = conteoEdades(), det = [];
+      ce.forEach(function(n, j){ if (n) det.push(n + ' de ' + GRUPOS[j]); });
+      filas += '<div><b>Niños en el concurso de disfraces</b>' +
+               (st.cc > 0 ? plural(st.cc, 'niño', 'niños') + '<br><span class="nota">' + det.join(' · ') + '</span>' : 'Ninguno') + '</div>';
+    }
     filas += '<div><b>Película del viernes</b>' + (st.pp > 0 ? 'Sí, ' + plural(st.pp, 'persona', 'personas') : 'No vienen') + '</div>';
 
     pintar(btnAtras() +
@@ -216,7 +257,8 @@
     var b = document.getElementById('enviar');
     b.disabled = true; b.textContent = 'Enviando…';
     apiPost({ calle: casas[st.c].calle, numero: casaSel().n, dulces: st.d === true,
-              ninos: st.k || 0, concurso: st.cc || 0, personas: st.pp || 0 })
+              ninos: st.k || 0, edades: (function(c){ return { c0: c[0], c1: c[1], c2: c[2] }; })(conteoEdades()),
+              personas: st.pp || 0 })
       .then(function(){ casaSel().ya = true; gracias(); })
       .catch(function(e){
         confirmar('No se pudo enviar. Revisa tu internet y vuelve a tocar "Enviar".<div class="detalle">' + textoError(e) + '</div>');

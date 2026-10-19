@@ -1,5 +1,5 @@
 // Pega aquí la URL de tu implementación de Apps Script (termina en /exec)
-var API_URL = 'https://script.google.com/macros/s/AKfycbxJuJukjfFoves1OuF_vTUXdIWaXtySqPbIgfYMJxHxomj3T3JhHumAexAEhgw4ilbY/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbxZAJQ14hHLXzoiytCnf09BzCco81XU-FXmGASthHUXSCChUo8TB7Dn1Ba-LvcYOTSN/exec';
 
 // Llamadas a la API. No necesitas editar nada debajo de esta línea.
 function conTiempo(promesa, ms) {
